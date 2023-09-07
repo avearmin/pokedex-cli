@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	pokeAPIUrl   = "https://pokeapi.co/api/v2/"
-	LocationArea = "location-area/"
+	LocationAreaEndpoint = "https://pokeapi.co/api/v2/location-area/"
 )
 
 type LocationData struct {
@@ -24,9 +23,8 @@ type LocationResult struct {
 	URL  string `json:"url"`
 }
 
-func sendGETRequest(pathComponent string) (*http.Response, error) {
-	endpoint := pokeAPIUrl + pathComponent
-	res, err := http.Get(endpoint)
+func sendGETRequest(url string) (*http.Response, error) {
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
