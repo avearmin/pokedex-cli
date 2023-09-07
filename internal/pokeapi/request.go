@@ -50,9 +50,9 @@ func parse(responseBody []byte, locationData *LocationData) error {
 	return nil
 }
 
-func Get(pathComponent string) (LocationData, error) {
+func Get(url string) (LocationData, error) {
 	var locationData LocationData
-	res, err := sendGETRequest(pathComponent)
+	res, err := sendGETRequest(url)
 	if err != nil {
 		return locationData, err
 	}
