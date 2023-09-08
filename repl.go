@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/avearmin/pokedex-cli/internal/pokeapi"
+	"github.com/avearmin/pokedex-cli/internal/pokecache"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *config) error
+	callback    func(c *config, ca *pokecache.Cache) error
 }
 
 type config struct {
@@ -49,7 +51,7 @@ func commands() map[string]cliCommand {
 	}
 }
 
-func commandHelp(*config) error {
+func commandHelp(c *config, cache *pokecache.Cache) error {
 	fmt.Print(
 		"Welcome to the Pokedex!\n",
 		"Usage:\n\n",
@@ -62,16 +64,16 @@ func commandHelp(*config) error {
 	return nil
 }
 
-func commandExit(c *config) error {
+func commandExit(c *config, cache *pokecache.Cache) error {
 	os.Exit(0)
 	return nil
 }
 
-func commandMap(c *config) error {
+func commandMap(c *config, cache *pokecache.Cache) error {
 	if c.next == "" {
 		return fmt.Errorf("No next found")
 	}
-	data, err := pokeapi.Get(c.next)
+	data, err := pokeapi.Get(c.next, cache)
 	if err != nil {
 		return err
 	}
@@ -81,11 +83,11 @@ func commandMap(c *config) error {
 	return nil
 }
 
-func commandMapb(c *config) error {
+func commandMapb(c *config, cache *pokecache.Cache) error {
 	if c.previous == "" {
 		return fmt.Errorf("No previous found")
 	}
-	data, err := pokeapi.Get(c.previous)
+	data, err := pokeapi.Get(c.previous, cache)
 	if err != nil {
 		return err
 	}
@@ -111,6 +113,7 @@ func StartRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
 	cmds := commands()
 	config := initConfig()
+	cache := pokecache.NewCache(5 * time.Minute)
 	for {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
@@ -121,7 +124,7 @@ func StartRepl() {
 			fmt.Printf("%s is not a valid command", cleanInput)
 			continue
 		}
-		err := cmd.callback(&config)
+		err := cmd.callback(&config, cache)
 		if err != nil {
 			fmt.Println(err)
 		}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/avearmin/pokedex-cli/internal/pokecache"
 )
 
 const (
@@ -23,7 +25,7 @@ type LocationResult struct {
 	URL  string `json:"url"`
 }
 
-func sendGETRequest(url string) (*http.Response, error) {
+func fetch(url string) (*http.Response, error) {
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -50,13 +52,30 @@ func parse(responseBody []byte, locationData *LocationData) error {
 	return nil
 }
 
-func Get(url string) (LocationData, error) {
-	var locationData LocationData
-	res, err := sendGETRequest(url)
+func fetchAndRead(url string, cache *pokecache.Cache) ([]byte, error) {
+	res, err := fetch(url)
 	if err != nil {
-		return locationData, err
+		return nil, err
 	}
 	body, err := readResponseBody(res)
+	if err != nil {
+		return nil, err
+	}
+	cache.Add(url, body)
+	return body, nil
+}
+
+func Get(url string, cache *pokecache.Cache) (LocationData, error) {
+	var locationData LocationData
+	body, ok := cache.Get(url)
+	if ok {
+		err := parse(body, &locationData)
+		if err != nil {
+			return locationData, err
+		}
+		return locationData, nil
+	}
+	body, err := fetchAndRead(url, cache)
 	if err != nil {
 		return locationData, err
 	}
