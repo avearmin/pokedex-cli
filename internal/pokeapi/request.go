@@ -52,6 +52,14 @@ func parse(responseBody []byte, locationData *LocationData) error {
 	return nil
 }
 
+func parseAndReturn(body []byte, locationData LocationData) (LocationData, error) {
+	err := parse(body, &locationData)
+	if err != nil {
+		return locationData, err
+	}
+	return locationData, nil
+}
+
 func fetchAndRead(url string, cache *pokecache.Cache) ([]byte, error) {
 	res, err := fetch(url)
 	if err != nil {
@@ -69,19 +77,11 @@ func Get(url string, cache *pokecache.Cache) (LocationData, error) {
 	var locationData LocationData
 	body, ok := cache.Get(url)
 	if ok {
-		err := parse(body, &locationData)
-		if err != nil {
-			return locationData, err
-		}
-		return locationData, nil
+		return parseAndReturn(body, locationData)
 	}
 	body, err := fetchAndRead(url, cache)
 	if err != nil {
 		return locationData, err
 	}
-	err = parse(body, &locationData)
-	if err != nil {
-		return locationData, err
-	}
-	return locationData, nil
+	return parseAndReturn(body, locationData)
 }
