@@ -73,7 +73,7 @@ func commandMap(c *config, cache *pokecache.Cache) error {
 	if c.next == "" {
 		return fmt.Errorf("No next found")
 	}
-	data, err := pokeapi.Get(c.next, cache)
+	data, err := pokeapi.Get(c.next, pokeapi.LocationData{}, cache)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,8 @@ func commandMapb(c *config, cache *pokecache.Cache) error {
 	if c.previous == "" {
 		return fmt.Errorf("No previous found")
 	}
-	data, err := pokeapi.Get(c.previous, cache)
+	data := pokeapi.LocationData{}
+	data, err := pokeapi.Get(c.previous, pokeapi.LocationData{}, cache)
 	if err != nil {
 		return err
 	}
