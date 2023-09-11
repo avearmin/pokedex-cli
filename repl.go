@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
-	"github.com/avearmin/pokedex-cli/internal/inputparser"
 	"github.com/avearmin/pokedex-cli/internal/pokeapi"
 	"github.com/avearmin/pokedex-cli/internal/pokecache"
 )
@@ -13,7 +14,7 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *config, arg string) error
+	callback    func(c *config, args []string) error
 }
 
 type config struct {
@@ -60,7 +61,7 @@ func commands() map[string]cliCommand {
 	}
 }
 
-func commandHelp(c *config, arg string) error {
+func commandHelp(c *config, args []string) error {
 	fmt.Print(
 		"Welcome to the Pokedex!\n",
 		"Usage:\n\n",
@@ -73,12 +74,12 @@ func commandHelp(c *config, arg string) error {
 	return nil
 }
 
-func commandExit(c *config, arg string) error {
+func commandExit(c *config, args []string) error {
 	os.Exit(0)
 	return nil
 }
 
-func commandMap(c *config, arg string) error {
+func commandMap(c *config, args []string) error {
 	if c.next == "" {
 		return fmt.Errorf("No next found")
 	}
@@ -92,7 +93,7 @@ func commandMap(c *config, arg string) error {
 	return nil
 }
 
-func commandMapb(c *config, arg string) error {
+func commandMapb(c *config, args []string) error {
 	if c.previous == "" {
 		return fmt.Errorf("No previous found")
 	}
@@ -106,14 +107,20 @@ func commandMapb(c *config, arg string) error {
 	return nil
 }
 
-func commandExplore(c *config, arg string) error {
-	data, err := pokeapi.Get(pokeapi.LocationAreaEndpoint+arg, pokeapi.LocationAreaData{}, c.cache)
+func commandExplore(c *config, args []string) error {
+	data, err := pokeapi.Get(pokeapi.LocationAreaEndpoint+args[0], pokeapi.LocationAreaData{}, c.cache)
 	if err != nil {
 		return err
 	}
 	printPokemonNames(data.PokemonEncounters)
 	return nil
 
+}
+
+func trimAndLower(s string) string {
+	newString := strings.ToLower(s)
+	newString = strings.Trim(newString, " ")
+	return newString
 }
 
 func printLocationResults(locationResults []pokeapi.LocationResult) {
@@ -129,20 +136,20 @@ func printPokemonNames(encounters []pokeapi.PokemonEncounters) {
 }
 
 func StartRepl() {
-	inputParser := inputparser.NewInputParser(2)
+	scanner := bufio.NewScanner(os.Stdin)
 	cmds := commands()
 	config := initConfig()
 	for {
 		fmt.Print("Pokedex > ")
-		if err := inputParser.ScanAndParse(); err != nil {
-			fmt.Println(err)
-		}
-		cmd, ok := cmds[inputParser.Arg(0)]
+		scanner.Scan()
+		input := trimAndLower(scanner.Text())
+		args := strings.Fields(input)
+		cmd, ok := cmds[args[0]]
 		if !ok {
-			fmt.Printf("%s is not a valid command\n", inputParser.Arg(0))
+			fmt.Printf("%s is not a valid command\n", args[0])
 			continue
 		}
-		err := cmd.callback(&config, inputParser.Arg(1))
+		err := cmd.callback(&config, args[1:])
 		if err != nil {
 			fmt.Println(err)
 		}
