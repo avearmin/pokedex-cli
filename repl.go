@@ -13,16 +13,21 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *config, ca *pokecache.Cache, arg string) error
+	callback    func(c *config, arg string) error
 }
 
 type config struct {
+	cache    *pokecache.Cache
 	next     string
 	previous string
 }
 
 func initConfig() config {
-	return config{next: pokeapi.LocationAreaEndpoint}
+	cache := pokecache.NewCache(5 * time.Minute)
+	return config{
+		cache: cache,
+		next:  pokeapi.LocationAreaEndpoint,
+	}
 }
 
 func commands() map[string]cliCommand {
@@ -55,7 +60,7 @@ func commands() map[string]cliCommand {
 	}
 }
 
-func commandHelp(c *config, cache *pokecache.Cache, arg string) error {
+func commandHelp(c *config, arg string) error {
 	fmt.Print(
 		"Welcome to the Pokedex!\n",
 		"Usage:\n\n",
@@ -68,16 +73,16 @@ func commandHelp(c *config, cache *pokecache.Cache, arg string) error {
 	return nil
 }
 
-func commandExit(c *config, cache *pokecache.Cache, arg string) error {
+func commandExit(c *config, arg string) error {
 	os.Exit(0)
 	return nil
 }
 
-func commandMap(c *config, cache *pokecache.Cache, arg string) error {
+func commandMap(c *config, arg string) error {
 	if c.next == "" {
 		return fmt.Errorf("No next found")
 	}
-	data, err := pokeapi.Get(c.next, pokeapi.LocationData{}, cache)
+	data, err := pokeapi.Get(c.next, pokeapi.LocationData{}, c.cache)
 	if err != nil {
 		return err
 	}
@@ -87,11 +92,11 @@ func commandMap(c *config, cache *pokecache.Cache, arg string) error {
 	return nil
 }
 
-func commandMapb(c *config, cache *pokecache.Cache, arg string) error {
+func commandMapb(c *config, arg string) error {
 	if c.previous == "" {
 		return fmt.Errorf("No previous found")
 	}
-	data, err := pokeapi.Get(c.previous, pokeapi.LocationData{}, cache)
+	data, err := pokeapi.Get(c.previous, pokeapi.LocationData{}, c.cache)
 	if err != nil {
 		return err
 	}
@@ -101,8 +106,8 @@ func commandMapb(c *config, cache *pokecache.Cache, arg string) error {
 	return nil
 }
 
-func commandExplore(c *config, cache *pokecache.Cache, arg string) error {
-	data, err := pokeapi.Get(pokeapi.LocationAreaEndpoint+arg, pokeapi.LocationAreaData{}, cache)
+func commandExplore(c *config, arg string) error {
+	data, err := pokeapi.Get(pokeapi.LocationAreaEndpoint+arg, pokeapi.LocationAreaData{}, c.cache)
 	if err != nil {
 		return err
 	}
@@ -127,7 +132,6 @@ func StartRepl() {
 	inputParser := inputparser.NewInputParser(2)
 	cmds := commands()
 	config := initConfig()
-	cache := pokecache.NewCache(5 * time.Minute)
 	for {
 		fmt.Print("Pokedex > ")
 		if err := inputParser.ScanAndParse(); err != nil {
@@ -138,7 +142,7 @@ func StartRepl() {
 			fmt.Printf("%s is not a valid command\n", inputParser.Arg(0))
 			continue
 		}
-		err := cmd.callback(&config, cache, inputParser.Arg(1))
+		err := cmd.callback(&config, inputParser.Arg(1))
 		if err != nil {
 			fmt.Println(err)
 		}
