@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -19,15 +20,18 @@ type cliCommand struct {
 
 type config struct {
 	cache    *pokecache.Cache
+	pokedex  map[string]pokeapi.PokemonData
 	next     string
 	previous string
 }
 
 func initConfig() config {
 	cache := pokecache.NewCache(5 * time.Minute)
+	pokedex := make(map[string]pokeapi.PokemonData)
 	return config{
-		cache: cache,
-		next:  pokeapi.LocationAreaEndpoint,
+		cache:   cache,
+		pokedex: pokedex,
+		next:    pokeapi.LocationAreaEndpoint,
 	}
 }
 
@@ -57,6 +61,11 @@ func commands() map[string]cliCommand {
 			name:        "explore <area-name>",
 			description: "Gets a list of pokemon in the location",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch <pokemon>",
+			description: "Attempt to catch a pokemon and save them to your pokedex",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -114,7 +123,21 @@ func commandExplore(c *config, args []string) error {
 	}
 	printPokemonNames(data.PokemonEncounters)
 	return nil
+}
 
+func commandCatch(c *config, args []string) error {
+	data, err := pokeapi.Get(pokeapi.PokemonEndpoint+args[0], pokeapi.PokemonData{}, c.cache)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Throwing pokeball at %s...\n", args[0])
+	if chanceToCatch := rand.Intn(data.BaseExperience); chanceToCatch > 50 {
+		fmt.Printf("%s got away\n", args[0])
+		return nil
+	}
+	fmt.Printf("Caught %s!\n", args[0])
+	c.pokedex[args[0]] = data
+	return nil
 }
 
 func trimAndLower(s string) string {
